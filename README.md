@@ -490,20 +490,49 @@ python src/models/train_model.py \
 
 ---
 
-## FastAPIとStreamlitアプリケーションの構築
+## 🚀 FastAPIとStreamlitアプリケーションの構築
 
 FastAPIとStreamlitアプリのコードは、すでに`src/api`と`streamlit_app`に用意されています。これらのアプリを構築して起動するには：
 
-* FastAPI用のビルドのため、ソースコードのルートに`Dockerfile`を追加
-* Streamlitアプリをパッケージ化・ビルドするため、`streamlit_app/Dockerfile`を追加
-* 両方のアプリを起動するため、ルートパスに`docker-compose.yaml`を追加。Streamlitアプリの環境変数に`API_URL=http://fastapi:8000`を設定することを忘れずに
+### 📋 前提条件
 
-両方のアプリを起動すると、Streamlit Web UIにアクセスして予測を行うことができます。
+1. **DockerとDocker Composeがインストールされていることを確認：**
+   ```bash
+   docker --version
+   docker compose version
+   ```
 
-また、以下のコマンドでFastAPIを直接使用して予測をテストすることもできます：
+2. **訓練済みモデルが存在することを確認：**
+   ```bash
+   ls -la models/trained/
+   # 以下のファイルが存在することを確認：
+   # - house_price_prediction.pkl
+   # - preprocessor.pkl
+   ```
+
+### 🔧 アプリケーションの構築と起動
+
+1. **Docker Composeでアプリケーションを起動：**
+   ```bash
+   docker compose up --build -d
+   ```
+
+2. **コンテナの状態を確認：**
+   ```bash
+   docker compose ps
+   ```
+
+3. **アプリケーションにアクセス：**
+   - **Streamlit Web UI**: `http://192.168.1.131:8501`
+   - **FastAPI エンドポイント**: `http://192.168.1.131:8000`
+   - **FastAPI ドキュメント**: `http://192.168.1.131:8000/docs`
+
+### 🧪 API テスト
+
+FastAPIを直接使用して予測をテスト：
 
 ```bash
-curl -X POST "http://localhost:8000/predict" \
+curl -X POST "http://192.168.1.131:8000/predict" \
 -H "Content-Type: application/json" \
 -d '{
   "sqft": 1500,
@@ -515,7 +544,155 @@ curl -X POST "http://localhost:8000/predict" \
 }'
 ```
 
-`http://localhost:8000/predict`は、実際に実行されている場所に応じて適切なエンドポイントに置き換えてください。
+**期待される応答例：**
+```json
+{
+  "predicted_price": 482690.0,
+  "confidence_interval": [434421.0, 530959.0],
+  "features_importance": {},
+  "prediction_time": "2025-06-23T22:51:21.143610"
+}
+```
+
+### ⚠️ トラブルシューティング
+
+#### 1. Python 3.12での依存関係ビルドエラー
+
+**エラー例：**
+```
+pip._vendor.pyproject_hooks._impl.BackendUnavailable: Cannot import 'setuptools.build_meta'
+```
+
+**解決策：** Dockerfileでsetuptoolsを先にインストールするように修正済みです。
+
+#### 2. モデルファイルが見つからないエラー
+
+**エラー例：**
+```
+FileNotFoundError: [Errno 2] No such file or directory: 'models/trained/house_price_model.pkl'
+```
+
+**解決策：** `src/api/inference.py`のモデルファイル名を`house_price_prediction.pkl`に修正済みです。
+
+#### 3. コンテナが再起動を繰り返す
+
+**確認方法：**
+```bash
+docker compose logs fastapi
+```
+
+**解決策：**
+1. モデルファイルが存在することを確認
+2. ファイル名が正しいことを確認
+3. コンテナを再ビルド：
+   ```bash
+   docker compose down
+   docker compose up --build -d
+   ```
+
+#### 4. WSL2環境でのアクセス問題
+
+**問題：** `localhost`でのアクセスが拒否される
+
+**解決策：** WSL2のIPアドレスを使用：
+```bash
+# WSL2のIPアドレスを確認
+ip addr show eth0 | grep inet
+
+# アプリケーションにアクセス
+# Streamlit: http://[WSL2_IP]:8501
+# FastAPI: http://[WSL2_IP]:8000
+```
+
+#### 5. ポートが既に使用されている
+
+**エラー例：**
+```
+Error response from daemon: driver failed programming external connectivity on endpoint
+```
+
+**解決策：**
+```bash
+# 使用中のポートを確認
+netstat -tlnp | grep :8000
+netstat -tlnp | grep :8501
+
+# 既存のコンテナを停止
+docker compose down
+
+# 他のプロセスを停止してから再起動
+docker compose up -d
+```
+
+#### 6. メモリ不足エラー
+
+**エラー例：**
+```
+failed to register layer: Error processing tar file(exit status 1): write /usr/local/lib/python3.12/site-packages/... no space left on device
+```
+
+**解決策：**
+```bash
+# Dockerの未使用リソースをクリーンアップ
+docker system prune -a
+
+# ディスク容量を確認
+df -h
+```
+
+### 📊 アプリケーション構成
+
+#### FastAPI バックエンド
+- **ポート**: 8000
+- **エンドポイント**:
+  - `GET /health`: ヘルスチェック
+  - `POST /predict`: 単一予測
+  - `POST /batch-predict`: バッチ予測
+- **自動生成ドキュメント**: `http://192.168.1.131:8000/docs`
+
+#### Streamlit フロントエンド
+- **ポート**: 8501
+- **機能**:
+  - インタラクティブな予測フォーム
+  - リアルタイム結果表示
+  - 信頼区間の可視化
+- **環境変数**: `API_URL=http://fastapi:8000`
+
+### 🔄 アプリケーションの管理
+
+#### 起動
+```bash
+docker compose up -d
+```
+
+#### 停止
+```bash
+docker compose down
+```
+
+#### ログ確認
+```bash
+# 全サービスのログ
+docker compose logs
+
+# 特定サービスのログ
+docker compose logs fastapi
+docker compose logs streamlit
+```
+
+#### 再ビルド
+```bash
+docker compose down
+docker compose up --build -d
+```
+
+### 🎯 次のステップ
+
+1. **Streamlit UIで予測を試す**: `http://192.168.1.131:8501`
+2. **API ドキュメントを確認**: `http://192.168.1.131:8000/docs`
+3. **バッチ予測をテスト**: 複数の住宅データで一括予測
+4. **モデル性能の監視**: MLflowで実験結果を確認
+5. **本番環境へのデプロイ**: KubernetesやAWS ECSでの運用
 
 ---
 
