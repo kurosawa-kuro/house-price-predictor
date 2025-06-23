@@ -202,14 +202,25 @@ ERR_CONNECTION_REFUSED
 1. WSL2のIPアドレスを確認：`ip addr show eth0 | grep inet`
 2. `http://[WSL2のIP]:5555`でアクセス（例：`http://192.168.1.131:5555`）
 
-#### 2. Docker Composeの警告
+#### 2. FastAPI/Streamlitアプリにアクセスできない（WSL2環境）
+```
+ERR_CONNECTION_REFUSED
+```
+
+**解決策：**
+1. WSL2のIPアドレスを確認：`ip addr show eth0 | grep inet`
+2. 以下のURLでアクセス：
+   - Streamlit: `http://[WSL2のIP]:8501`
+   - FastAPI: `http://[WSL2のIP]:8000`
+
+#### 3. Docker Composeの警告
 ```
 WARN[0000] the attribute `version` is obsolete, it will be ignored
 ```
 
 **解決策：** この警告は無視して問題ありません。新しいDocker Composeでは`version`属性は不要です。
 
-#### 3. コンテナが起動しない
+#### 4. コンテナが起動しない
 ```bash
 # コンテナのログを確認
 docker compose logs
@@ -217,6 +228,67 @@ docker compose logs
 # コンテナを再起動
 docker compose down
 docker compose up -d
+```
+
+#### 5. Python 3.12での依存関係ビルドエラー
+```
+pip._vendor.pyproject_hooks._impl.BackendUnavailable: Cannot import 'setuptools.build_meta'
+```
+
+**解決策：** Dockerfileでsetuptoolsを先にインストールするように修正済みです。
+
+#### 6. モデルファイルが見つからないエラー
+```
+FileNotFoundError: [Errno 2] No such file or directory: 'models/trained/house_price_model.pkl'
+```
+
+**解決策：** `src/api/inference.py`のモデルファイル名を`house_price_prediction.pkl`に修正済みです。
+
+#### 7. コンテナが再起動を繰り返す
+```bash
+# 確認方法
+docker compose logs fastapi
+```
+
+**解決策：**
+1. モデルファイルが存在することを確認
+2. ファイル名が正しいことを確認
+3. コンテナを再ビルド：
+   ```bash
+   docker compose down
+   docker compose up --build -d
+   ```
+
+#### 8. ポートが既に使用されている
+```
+Error response from daemon: driver failed programming external connectivity on endpoint
+```
+
+**解決策：**
+```bash
+# 使用中のポートを確認
+netstat -tlnp | grep :8000
+netstat -tlnp | grep :8501
+
+# 既存のコンテナを停止
+docker compose down
+
+# 他のプロセスを停止してから再起動
+docker compose up -d
+```
+
+#### 9. メモリ不足エラー
+```
+failed to register layer: Error processing tar file(exit status 1): write /usr/local/lib/python3.12/site-packages/... no space left on device
+```
+
+**解決策：**
+```bash
+# Dockerの未使用リソースをクリーンアップ
+docker system prune -a
+
+# ディスク容量を確認
+df -h
 ```
 
 ### MLflow関連の警告
@@ -693,6 +765,52 @@ docker compose up --build -d
 3. **バッチ予測をテスト**: 複数の住宅データで一括予測
 4. **モデル性能の監視**: MLflowで実験結果を確認
 5. **本番環境へのデプロイ**: KubernetesやAWS ECSでの運用
+
+### ✅ 成功例
+
+#### アプリケーション起動確認
+```bash
+# コンテナの状態確認
+docker compose ps
+
+# 出力例：
+NAME                                IMAGE                             COMMAND                  SERVICE     CREATED         STATUS         PORTS
+house-price-predictor-fastapi-1     house-price-predictor-fastapi     "uvicorn main:app --…"   fastapi     4 minutes ago   Up 4 minutes   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+house-price-predictor-streamlit-1   house-price-predictor-streamlit   "streamlit run app.py"   streamlit   4 minutes ago   Up 4 minutes   0.0.0.0:8501->8501/tcp, [::]:8501->8501/tcp
+```
+
+#### API テスト成功例
+```bash
+curl -X POST "http://192.168.1.131:8000/predict" \
+-H "Content-Type: application/json" \
+-d '{
+  "sqft": 1500,
+  "bedrooms": 3,
+  "bathrooms": 2,
+  "location": "suburban",
+  "year_built": 2000,
+  "condition": "fair"
+}'
+
+# 応答例：
+{
+  "predicted_price": 482690.0,
+  "confidence_interval": [434421.0, 530959.0],
+  "features_importance": {},
+  "prediction_time": "2025-06-23T22:51:21.143610"
+}
+```
+
+### 🌐 アクセス情報
+
+| サービス | URL | 説明 |
+|---------|-----|------|
+| Streamlit UI | `http://192.168.1.131:8501` | メインのWebインターフェース |
+| FastAPI | `http://192.168.1.131:8000` | REST API エンドポイント |
+| FastAPI Docs | `http://192.168.1.131:8000/docs` | 自動生成APIドキュメント |
+| MLflow UI | `http://192.168.1.131:5555` | 実験追跡・モデル管理 |
+
+> 💡 **注意**: WSL2環境では、`localhost`の代わりにWSL2のIPアドレス（`192.168.1.131`）を使用してください。
 
 ---
 
