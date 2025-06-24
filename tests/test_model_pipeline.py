@@ -49,6 +49,10 @@ class TestModelPipeline:
                 "condition": ["Good"],
             }
         )
+        # 特徴量エンジニアリングで追加されるカラムを再現
+        sample_data["house_age"] = 2024 - sample_data["year_built"]  # 年は適宜調整
+        sample_data["bed_bath_ratio"] = sample_data["bedrooms"] / sample_data["bathrooms"]
+        sample_data["price_per_sqft"] = 0  # テスト用なのでダミー値でOK（予測には使われない）
 
         try:
             model = joblib.load(model_path)
