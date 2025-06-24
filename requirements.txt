@@ -24,6 +24,7 @@ mlflow>=2.10.0
 # ✅ TESTING
 # ---------------------------------------------
 pytest==7.3.1          # Python testing framework — great for writing unit tests for ML pipelines, data validation, etc.
+pytest-cov==4.1.0      # Coverage reporting for pytest
 
 # ---------------------------------------------
 # ⚡ API DEVELOPMENT (FOR MODEL SERVING)
@@ -39,5 +40,14 @@ joblib==1.3.1
 setuptools==65.5.0
 ipykernel==6.29.5
 pyarrow>=14.0.0
+
+# ---------------------------------------------
+# 🔧 CODE QUALITY & FORMATTING (CI/CD用)
+# ---------------------------------------------
+flake8==6.0.0          # Code linting and style checking
+black==23.7.0          # Code formatting
+isort==5.12.0          # Import sorting
+mypy==1.5.1            # Static type checking
+bandit==1.7.5          # Security linting
 
 

@@ -8,6 +8,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 import joblib
+import argparse
 
 # Set up logging
 logging.basicConfig(
@@ -101,8 +102,6 @@ def run_feature_engineering(input_file, output_file, preprocessor_file):
     return df_transformed
 
 if __name__ == "__main__":
-    import argparse
-    
     parser = argparse.ArgumentParser(description='Feature engineering for housing data.')
     parser.add_argument('--input', required=True, help='Path to cleaned CSV file')
     parser.add_argument('--output', required=True, help='Path for output CSV file (engineered features)')
