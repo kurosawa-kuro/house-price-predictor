@@ -64,6 +64,7 @@ def batch_predict(requests: list[HousePredictionRequest]) -> list[float]:
     """
     Perform batch predictions.
     
+    
     Args:
         requests: List of house prediction request data
         
