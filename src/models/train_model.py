@@ -116,8 +116,11 @@ def main(args):
         client = MlflowClient()
         try:
             client.create_registered_model(model_name)
-        except mlflow.exceptions.RestException:
-            pass  # already exists
+        except Exception as e:
+            if "already exists" in str(e):
+                logger.info(f"Model {model_name} already exists, skipping creation")
+            else:
+                raise e
 
         model_version = client.create_model_version(
             name=model_name, source=model_uri, run_id=mlflow.active_run().info.run_id
