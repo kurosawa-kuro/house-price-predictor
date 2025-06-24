@@ -1,6 +1,13 @@
+"""
+Inference module for house price prediction.
+
+This module handles model loading and prediction logic for the house price
+prediction API.
+"""
+
+from datetime import datetime
 import joblib
 import pandas as pd
-from datetime import datetime
 from schemas import HousePredictionRequest, PredictionResponse
 
 # Load model and preprocessor
@@ -11,11 +18,18 @@ try:
     model = joblib.load(MODEL_PATH)
     preprocessor = joblib.load(PREPROCESSOR_PATH)
 except Exception as e:
-    raise RuntimeError(f"Error loading model or preprocessor: {str(e)}")
+    raise RuntimeError(f"Error loading model or preprocessor: {str(e)}") from e
+
 
 def predict_price(request: HousePredictionRequest) -> PredictionResponse:
     """
     Predict house price based on input features.
+    
+    Args:
+        request: House prediction request data
+        
+    Returns:
+        PredictionResponse: Predicted house price and confidence interval
     """
     # Prepare input data
     input_data = pd.DataFrame([request.dict()])
@@ -45,9 +59,16 @@ def predict_price(request: HousePredictionRequest) -> PredictionResponse:
         prediction_time=datetime.now().isoformat()
     )
 
+
 def batch_predict(requests: list[HousePredictionRequest]) -> list[float]:
     """
     Perform batch predictions.
+    
+    Args:
+        requests: List of house prediction request data
+        
+    Returns:
+        list: List of predicted house prices
     """
     input_data = pd.DataFrame([req.dict() for req in requests])
     input_data['house_age'] = datetime.now().year - input_data['year_built']

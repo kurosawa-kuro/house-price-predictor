@@ -1,3 +1,10 @@
+"""
+FastAPI application for house price prediction.
+
+This module provides REST API endpoints for predicting house prices
+using a trained machine learning model.
+"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from inference import predict_price, batch_predict
@@ -32,17 +39,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Health check endpoint
 @app.get("/health", response_model=dict)
 async def health_check():
+    """
+    Health check endpoint.
+    
+    Returns:
+        dict: Status information about the API
+    """
     return {"status": "healthy", "model_loaded": True}
 
-# Prediction endpoint
 @app.post("/predict", response_model=PredictionResponse)
 async def predict(request: HousePredictionRequest):
+    """
+    Single prediction endpoint.
+    
+    Args:
+        request: House prediction request data
+        
+    Returns:
+        PredictionResponse: Predicted house price and confidence interval
+    """
     return predict_price(request)
 
-# Batch prediction endpoint
 @app.post("/batch-predict", response_model=list)
 async def batch_predict_endpoint(requests: list[HousePredictionRequest]):
+    """
+    Batch prediction endpoint.
+    
+    Args:
+        requests: List of house prediction request data
+        
+    Returns:
+        list: List of predicted house prices
+    """
     return batch_predict(requests)
