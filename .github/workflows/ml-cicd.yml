@@ -70,7 +70,7 @@ jobs:
           bandit -r src/ -f json -o bandit-report.json || true
           bandit -r src/ --severity-level high
 
-  # テスト実行
+  # テスト実行（モデル訓練前の基本テスト）
   test:
     runs-on: ubuntu-latest
     needs: code-quality
@@ -97,9 +97,9 @@ jobs:
           pip install pytest pytest-cov
           pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Run basic tests (without model files)
         run: |
-          pytest tests/ -v --cov=src --cov-report=xml --cov-report=html
+          pytest tests/ -v --cov=src --cov-report=xml --cov-report=html -k "not test_model_files_exist and not test_model_can_load and not test_model_can_predict"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -203,6 +203,8 @@ jobs:
 
       - name: Run model performance tests
         run: |
+          python -m pytest tests/test_model_pipeline.py::TestModelPipeline::test_model_files_exist -v
+          python -m pytest tests/test_model_pipeline.py::TestModelPipeline::test_model_can_load -v
           python -m pytest tests/test_model_pipeline.py::TestModelPipeline::test_model_can_predict -v
 
       - name: Model performance summary
